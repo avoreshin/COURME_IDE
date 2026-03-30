@@ -1,0 +1,74 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+
+    <!-- Уникальный идентификатор плагина. Совпадает с pluginId в gradle.properties -->
+    <id>changelogai</id>
+    <name>GIGACOURME</name>
+
+    <!-- Версия и описание подставляются автоматически через patchPluginXml из gradle -->
+    <version>1.0.0</version>
+    <description><![CDATA[Placeholder — replaced by patchPluginXml]]></description>
+    <change-notes><![CDATA[Placeholder — replaced by patchPluginXml]]></change-notes>
+
+    <vendor email="avoreshin@sberbank.ru">Andrey Oreshin</vendor>
+
+    <!-- Требуемые модули платформы -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.vcs</depends>
+    <depends>Git4Idea</depends>
+
+    <!-- Extension points плагина -->
+    <extensionPoints>
+        <extensionPoint qualifiedName="changelogai.feature"
+                        interface="changelogai.core.feature.Feature"
+                        dynamic="true"/>
+    </extensionPoints>
+
+    <!-- Расширения платформы -->
+    <extensions defaultExtensionNs="com.intellij">
+
+        <toolWindow id="GIGACOURME"
+                    anchor="right"
+                    secondary="false"
+                    canCloseContents="false"
+                    factoryClass="changelogai.platform.toolwindow.ChangelogToolWindowFactory"
+                    icon="/META-INF/toolbar.svg"/>
+
+        <applicationService serviceImplementation="changelogai.core.settings.PluginState"/>
+        <applicationService serviceImplementation="changelogai.core.feature.FeatureToggleState"/>
+        <applicationService serviceImplementation="changelogai.platform.FeatureRegistry"/>
+        <applicationService serviceImplementation="changelogai.core.mcp.McpState"/>
+        <applicationService serviceImplementation="changelogai.core.skill.SkillState"/>
+
+        <projectService serviceImplementation="changelogai.feature.gigacodeae.mcp.McpService"/>
+        <projectService serviceImplementation="changelogai.feature.gigacodeae.ChatSessionRepository"/>
+        <projectService serviceImplementation="changelogai.feature.spec.SpecSessionRepository"/>
+        <projectService serviceImplementation="changelogai.feature.kb.KnowledgeBaseService"/>
+        <projectService serviceImplementation="changelogai.feature.kb.KnowledgeBaseRepository"/>
+
+    </extensions>
+
+    <!-- Расширения самого плагина (фичи) -->
+    <extensions defaultExtensionNs="changelogai">
+        <feature implementation="changelogai.feature.changelog.ChangelogFeature"/>
+        <feature implementation="changelogai.feature.gigacodeae.GigaCodeAEFeature"/>
+        <feature implementation="changelogai.feature.coverage.CoverageFeature"/>
+        <feature implementation="changelogai.feature.gigacodeae.mcp.McpFeature"/>
+        <feature implementation="changelogai.feature.spec.SpecFeature"/>
+        <feature implementation="changelogai.feature.kb.KnowledgeBaseFeature"/>
+        <feature implementation="changelogai.feature.sprint.SprintFeature"/>
+    </extensions>
+
+    <!-- Действия -->
+    <actions>
+        <action id="changelogai.feature.changelog.ChangelogAction"
+                class="changelogai.feature.changelog.ChangelogAction"
+                text="Generate Changelog"
+                description="Generate CHANGELOG.md from selected git commits using AI"
+                icon="/META-INF/toolbar.svg">
+            <add-to-group group-id="Git.Menu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt G"/>
+        </action>
+    </actions>
+
+</idea-plugin>

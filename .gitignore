@@ -1,0 +1,38 @@
+### IntelliJ / JetBrains ###
+.idea/
+*.iml
+*.iws
+out/
+
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+### IntelliJ Platform Gradle Plugin cache ###
+.intellijPlatform/
+
+### Kotlin compiler sessions ###
+.kotlin/
+
+### Compiled output ###
+bin/
+
+### IDE workspace ###
+.vscode/
+
+### OS files ###
+.DS_Store
+Thumbs.db
+
+### Logs / temp ###
+*.log
+*.tmp
+*.swp
+
+### Claude Code internals ###
+.agent/
+.agents/
+skills/
+skills-lock.json
