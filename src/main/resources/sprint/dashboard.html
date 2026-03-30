@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Sprint War Room</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+:root {
+  --bg:        #08090B;
+  --bg-card:   #0F1117;
+  --bg-hover:  #161820;
+  --bg-panel:  #0B0D12;
+  --amber:     #E8C547;
+  --blue:      #4F9CF9;
+  --green:     #3DD68C;
+  --red:       #F75555;
+  --yellow:    #F5A623;
+  --text:      #DDE0EA;
+  --dim:       #6B7280;
+  --border:    #1C1F2A;
+  --border2:   #252836;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  overflow-x: hidden;
+}
+
+/* ── LOADING STATE ─────────────────────────────────────────────── */
+#loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100vh; gap: 16px;
+  color: var(--dim);
+}
+.pulse-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
+.loading-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+#app { display: none; flex-direction: column; min-height: 100vh; padding: 16px; gap: 14px; }
+#app.visible { display: flex; }
+
+/* ── SPRINT HEADER ───────────────────────────────────────────────── */
+.sprint-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.sprint-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: var(--amber);
+}
+
+.sprint-meta { display: flex; flex-direction: column; gap: 6px; }
+.sprint-name {
+  font-size: 15px; font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.sprint-dates {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.05em;
+}
+.sprint-goal {
+  font-size: 12px; color: var(--dim);
+  font-style: italic;
+  max-width: 400px;
+}
+
+.sprint-scores { display: flex; align-items: center; gap: 20px; }
+
+/* Velocity gauge */
+.gauge-wrap { position: relative; width: 72px; height: 72px; }
+.gauge-svg { width: 72px; height: 72px; }
+.gauge-track { fill: none; stroke: var(--border2); stroke-width: 5; }
+.gauge-arc {
+  fill: none; stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 188;
+  stroke-dashoffset: 188;
+  transition: stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1) .3s,
+              stroke 0.3s;
+  transform-origin: center;
+  transform: rotate(-210deg);
+}
+.gauge-val {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1px;
+}
+.gauge-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px; font-weight: 600;
+  line-height: 1;
+}
+.gauge-lbl { font-size: 9px; color: var(--dim); letter-spacing: 0.05em; }
+
+.score-block { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.score-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px; font-weight: 600;
+  line-height: 1;
+}
+.score-lbl { font-size: 10px; color: var(--dim); letter-spacing: 0.03em; }
+
+/* ── FILTER BAR ─────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.filter-btn:hover { border-color: var(--amber); color: var(--text); }
+.filter-btn.active {
+  background: var(--bg-hover);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px; font-weight: 600;
+  line-height: 1;
+}
+.badge-red { background: rgba(247,85,85,.2); color: var(--red); }
+.badge-yellow { background: rgba(245,166,35,.2); color: var(--yellow); }
+.badge-green { background: rgba(61,214,140,.2); color: var(--green); }
+.badge-blue { background: rgba(79,156,249,.2); color: var(--blue); }
+
+.filter-spacer { flex: 1; }
+
+.refresh-btn {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ── STORY GRID ─────────────────────────────────────────────────── */
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+/* ── STORY CARD ─────────────────────────────────────────────────── */
+.story-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  cursor: default;
+  transition: background .15s, transform .15s, border-color .15s;
+  position: relative;
+  overflow: hidden;
+  animation: slideUp .3s ease both;
+  border-left: 3px solid var(--border);
+}
+.story-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+.story-card.risk-red { border-left-color: var(--red); }
+.story-card.risk-yellow { border-left-color: var(--yellow); }
+.story-card.risk-green { border-left-color: var(--green); }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.story-key {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.story-sp {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.story-summary {
+  font-size: 12px; font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.issues-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+
+.issue-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 10px; font-weight: 500;
+  line-height: 1.4;
+}
+.pill-red { background: rgba(247,85,85,.12); color: var(--red); }
+.pill-yellow { background: rgba(245,166,35,.12); color: var(--yellow); }
+.pill-green { background: rgba(61,214,140,.12); color: var(--green); }
+
+.ready-label {
+  font-size: 10px; color: var(--green);
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* AI panel — reveal on hover */
+.ai-panel {
+  max-height: 0; overflow: hidden;
+  transition: max-height .28s ease, opacity .2s;
+  opacity: 0;
+}
+.story-card:hover .ai-panel {
+  max-height: 200px;
+  opacity: 1;
+}
+
+.ai-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
+}
+
+.ai-comment {
+  font-size: 11px;
+  color: var(--dim);
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.action-row { display: flex; gap: 6px; align-items: center; }
+
+.btn-decompose {
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--blue);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-decompose:hover { background: rgba(79,156,249,.1); border-color: var(--blue); }
+.btn-decompose:disabled { opacity: .4; cursor: default; }
+
+/* Decomposition panel */
+.decomp-panel {
+  display: none;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+}
+.decomp-panel.visible { display: block; }
+
+.decomp-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.subtask-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.subtask-item {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 11px; color: var(--text);
+}
+.subtask-item::before { content: '›'; color: var(--dim); flex-shrink: 0; margin-top: 1px; }
+
+.btn-create-subtasks {
+  padding: 4px 12px;
+  border-radius: 3px;
+  border: 1px solid var(--green);
+  background: rgba(61,214,140,.08);
+  color: var(--green);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-create-subtasks:hover { background: rgba(61,214,140,.16); }
+.btn-create-subtasks:disabled { opacity: .4; cursor: default; }
+.btn-create-subtasks.done { border-color: var(--dim); color: var(--dim); background: transparent; }
+
+/* ── CARD STATUS BAR ────────────────────────────────────────────── */
+.card-footer {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 6px;
+}
+.story-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.story-assignee {
+  font-size: 10px; color: var(--dim);
+  margin-left: auto;
+  max-width: 100px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── EMPTY STATE ────────────────────────────────────────────────── */
+.empty-state {
+  grid-column: 1/-1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 48px;
+  color: var(--dim);
+  gap: 8px;
+}
+.empty-state-icon { font-size: 32px; opacity: .4; }
+.empty-state-text { font-size: 12px; }
+
+/* ── SUMMARY BAR ─────────────────────────────────────────────────── */
+.summary-bar {
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--dim);
+  font-style: italic;
+  border-left: 3px solid var(--blue);
+}
+
+/* ── SCROLLBAR ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* ── MODE SWITCHER ──────────────────────────────────────────────────── */
+.mode-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mode-btn {
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.mode-btn:hover { color: var(--text); border-color: var(--border2); }
+.mode-btn.active {
+  background: var(--bg-hover);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+/* ── RELEASE TOOLBAR ────────────────────────────────────────────────── */
+.release-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.release-input {
+  flex: 1; min-width: 100px; max-width: 160px;
+  padding: 5px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  outline: none;
+}
+.release-input:focus { border-color: var(--amber); }
+.release-input::placeholder { color: var(--dim); }
+
+.version-select {
+  flex: 1; min-width: 160px;
+  padding: 5px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236B7280'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 26px;
+}
+.version-select:focus { border-color: var(--amber); }
+.version-select option { background: var(--bg-card); }
+
+.btn-load-versions, .btn-load-release, .btn-export {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-load-versions { color: var(--blue); }
+.btn-load-versions:hover { border-color: var(--blue); background: rgba(79,156,249,.08); }
+.btn-load-release { color: var(--amber); }
+.btn-load-release:hover { border-color: var(--amber); background: rgba(232,197,71,.08); }
+.btn-export { color: var(--green); }
+.btn-export:hover { border-color: var(--green); background: rgba(61,214,140,.08); }
+.btn-export:disabled { opacity:.4; cursor:default; }
+
+/* ── RELEASE SUMMARY ─────────────────────────────────────────────────── */
+.release-summary {
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--blue);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--dim);
+  font-style: italic;
+  line-height: 1.6;
+  display: none;
+}
+.release-summary.visible { display: block; }
+
+/* ── RELEASE TYPE GROUP ───────────────────────────────────────────────── */
+.type-group { display: flex; flex-direction: column; gap: 8px; }
+.type-group-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.type-group-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.type-group-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+}
+.release-issue-row {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: background .12s;
+  animation: slideUp .25s ease both;
+}
+.release-issue-row:hover { background: var(--bg-hover); }
+.issue-key-lnk {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--blue);
+  flex-shrink: 0; letter-spacing: 0.04em;
+}
+.issue-summary-lnk {
+  font-size: 12px; color: var(--text);
+  flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.issue-sp-lnk {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--amber);
+  flex-shrink: 0;
+}
+.issue-status-lnk {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--dim);
+  flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/* ── RELEASE LOADING ─────────────────────────────────────────────────── */
+.release-loading {
+  display: none; align-items: center; gap: 10px;
+  padding: 20px; color: var(--dim);
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+}
+.release-loading.visible { display: flex; }
+
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="pulse-dot"></div>
+  <div class="loading-label">Ожидание данных спринта</div>
+</div>
+
+<div id="app">
+
+  <!-- Mode switcher -->
+  <div class="mode-bar">
+    <button class="mode-btn active" data-mode="sprint" onclick="setMode('sprint')">⚡ Спринт</button>
+    <button class="mode-btn" data-mode="release" onclick="setMode('release')">📦 Релиз</button>
+  </div>
+
+  <!-- ── SPRINT VIEW ───────────────────────────── -->
+  <div id="sprint-view">
+
+  <div class="sprint-header">
+    <div class="sprint-meta">
+      <div class="sprint-name" id="sprint-name">—</div>
+      <div class="sprint-dates" id="sprint-dates"></div>
+      <div class="sprint-goal" id="sprint-goal"></div>
+    </div>
+    <div class="sprint-scores">
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 72 72">
+          <circle class="gauge-track" cx="36" cy="36" r="30" stroke-dasharray="188" stroke-dashoffset="47"/>
+          <circle class="gauge-arc" id="gauge-arc" cx="36" cy="36" r="30"/>
+        </svg>
+        <div class="gauge-val">
+          <div class="gauge-num" id="gauge-num" style="color: var(--amber)">0</div>
+          <div class="gauge-lbl">VELOCITY</div>
+        </div>
+      </div>
+      <div class="score-block">
+        <div class="score-num" id="readiness-num" style="color: var(--green)">0%</div>
+        <div class="score-lbl">READY</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">
+      Все <span class="filter-badge badge-blue" id="count-all">0</span>
+    </button>
+    <button class="filter-btn" data-filter="RED" onclick="setFilter('RED')">
+      🔴 Блокеры <span class="filter-badge badge-red" id="count-red">0</span>
+    </button>
+    <button class="filter-btn" data-filter="YELLOW" onclick="setFilter('YELLOW')">
+      🟡 Риски <span class="filter-badge badge-yellow" id="count-yellow">0</span>
+    </button>
+    <button class="filter-btn" data-filter="GREEN" onclick="setFilter('GREEN')">
+      ✅ Готовы <span class="filter-badge badge-green" id="count-green">0</span>
+    </button>
+    <div class="filter-spacer"></div>
+    <button class="refresh-btn" onclick="requestRefresh()">↻ refresh</button>
+  </div>
+
+  <div class="story-grid" id="story-grid"></div>
+
+  <div class="summary-bar" id="summary-bar" style="display:none"></div>
+
+  </div><!-- end sprint-view -->
+
+  <!-- ── RELEASE VIEW ───────────────────────────── -->
+  <div id="release-view" style="display:none">
+
+    <div class="release-toolbar">
+      <input id="release-project-input" class="release-input" placeholder="Проект (SCRUM)">
+      <button class="btn-load-versions" onclick="loadVersions()">Загрузить версии</button>
+      <select id="version-select" class="version-select">
+        <option value="">— выберите версию —</option>
+      </select>
+      <button class="btn-load-release" onclick="triggerLoadRelease()">Загрузить релиз</button>
+      <button class="btn-export" id="export-btn" onclick="exportRelease()" disabled>Экспорт MD</button>
+    </div>
+
+    <div class="release-loading" id="release-loading">
+      <div class="pulse-dot"></div>
+      <span id="release-loading-text">Загрузка...</span>
+    </div>
+
+    <div class="release-summary" id="release-summary-bar"></div>
+
+    <div id="release-content"></div>
+
+  </div><!-- end release-view -->
+
+</div>
+
+<script>
+var state = null;
+var currentFilter = 'ALL';
+var decompositions = {};   // key -> List<String>
+
+// ── Entry point (called from Kotlin via executeJavaScript) ────────
+window.loadAnalysis = function(data) {
+  state = data;
+  renderHeader(data);
+  renderFilterBar(data);
+  renderStories(data.stories, currentFilter);
+  document.getElementById('summary-bar').textContent = data.summary;
+  document.getElementById('summary-bar').style.display = 'block';
+  document.getElementById('loading').style.display = 'none';
+  var app = document.getElementById('app');
+  app.classList.add('visible');
+};
+
+// ── Header ────────────────────────────────────────────────────────
+function renderHeader(data) {
+  document.getElementById('sprint-name').textContent = data.sprint.name;
+  var dates = '';
+  if (data.sprint.startDate) dates = data.sprint.startDate.substring(0,10);
+  if (data.sprint.endDate) dates += ' → ' + data.sprint.endDate.substring(0,10);
+  document.getElementById('sprint-dates').textContent = dates;
+  document.getElementById('sprint-goal').textContent = data.sprint.goal ? '«' + data.sprint.goal + '»' : '';
+  document.getElementById('gauge-num').textContent = data.velocityScore;
+  document.getElementById('readiness-num').textContent = data.readinessScore + '%';
+
+  // Animate gauge arc (circle r=30 → circumference≈188, track offset 47 → shows 270deg)
+  var pct = data.velocityScore / 100;
+  var total = 188;
+  var offset = total - (total * pct * 0.75);  // 0.75 because 270deg/360deg
+  var arc = document.getElementById('gauge-arc');
+  arc.style.strokeDashoffset = offset;
+  arc.style.stroke = pct >= 0.7 ? 'var(--green)' : pct >= 0.4 ? 'var(--yellow)' : 'var(--red)';
+}
+
+// ── Filter bar ────────────────────────────────────────────────────
+function renderFilterBar(data) {
+  var s = data.stories;
+  document.getElementById('count-all').textContent = s.length;
+  document.getElementById('count-red').textContent = s.filter(function(x){return x.riskLevel==='RED';}).length;
+  document.getElementById('count-yellow').textContent = s.filter(function(x){return x.riskLevel==='YELLOW';}).length;
+  document.getElementById('count-green').textContent = s.filter(function(x){return x.riskLevel==='GREEN';}).length;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.dataset.filter === f);
+  });
+  if (state) renderStories(state.stories, f);
+}
+
+// ── Story grid ────────────────────────────────────────────────────
+function renderStories(stories, filter) {
+  var grid = document.getElementById('story-grid');
+  grid.innerHTML = '';
+  var filtered = filter === 'ALL' ? stories : stories.filter(function(s){ return s.riskLevel === filter; });
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✓</div><div class="empty-state-text">Нет историй в этой категории</div></div>';
+    return;
+  }
+  filtered.forEach(function(s, i) {
+    var card = buildCard(s, i);
+    grid.appendChild(card);
+  });
+}
+
+// ── Card builder ──────────────────────────────────────────────────
+function buildCard(s, idx) {
+  var div = document.createElement('div');
+  div.className = 'story-card risk-' + s.riskLevel.toLowerCase();
+  div.style.animationDelay = Math.min(idx * 40, 400) + 'ms';
+
+  // Issues pills
+  var pillsHtml = '';
+  if (s.issues && s.issues.length > 0) {
+    var pillClass = s.riskLevel === 'RED' ? 'pill-red' : 'pill-yellow';
+    pillsHtml = '<div class="issues-row">' +
+      s.issues.slice(0, 3).map(function(issue){ return '<span class="issue-pill ' + pillClass + '">' + escHtml(issue) + '</span>'; }).join('') +
+      '</div>';
+  } else {
+    pillsHtml = '<div class="issues-row"><span class="ready-label">✓ Готово к разработке</span></div>';
+  }
+
+  // Decompose button — show only if has suggestion or SP > 5
+  var showDecomp = s.decompositionSuggestion || (s.riskLevel === 'RED' || s.riskLevel === 'YELLOW');
+  var decompBtn = showDecomp ? '<button class="btn-decompose" id="decomp-btn-' + s.key + '" onclick="triggerDecompose(\'' + s.key + '\')" title="Разбить на подзадачи">Декомпозировать</button>' : '';
+
+  // Decomp panel (pre-filled if suggestion exists)
+  var decompPanelHtml = buildDecompPanel(s);
+
+  div.innerHTML = [
+    '<div class="card-header">',
+      '<span class="story-key">' + escHtml(s.key) + '</span>',
+      (s.storyPoints != null ? '<span class="story-sp">▸ ' + s.storyPoints + ' SP</span>' : ''),
+    '</div>',
+    '<div class="story-summary">' + escHtml(s.summary) + '</div>',
+    pillsHtml,
+    '<div class="ai-panel">',
+      '<hr class="ai-divider">',
+      '<div class="ai-comment">' + escHtml(s.aiComment) + '</div>',
+      '<div class="action-row">' + decompBtn + '</div>',
+    '</div>',
+    decompPanelHtml,
+    '<div class="card-footer">',
+      '<span class="story-status">' + escHtml(s.status || '') + '</span>',
+      (s.assignee ? '<span class="story-assignee">' + escHtml(s.assignee) + '</span>' : ''),
+    '</div>'
+  ].join('');
+
+  return div;
+}
+
+function buildDecompPanel(s) {
+  var suggestions = s.decompositionSuggestion;
+  if (!suggestions || suggestions.length === 0) {
+    return '<div class="decomp-panel" id="decomp-panel-' + s.key + '"></div>';
+  }
+  decompositions[s.key] = suggestions;
+  return '<div class="decomp-panel" id="decomp-panel-' + s.key + '">' +
+    '<div class="decomp-title">ДЕКОМПОЗИЦИЯ</div>' +
+    '<div class="subtask-list">' +
+      suggestions.map(function(t){ return '<div class="subtask-item">' + escHtml(t) + '</div>'; }).join('') +
+    '</div>' +
+    '<button class="btn-create-subtasks" id="create-btn-' + s.key + '" onclick="createSubtasks(\'' + s.key + '\')">' +
+      '+ Создать в Jira' +
+    '</button>' +
+  '</div>';
+}
+
+// ── Decompose action ──────────────────────────────────────────────
+function triggerDecompose(key) {
+  if (decompositions[key]) {
+    showDecompPanel(key, decompositions[key]);
+    return;
+  }
+  var btn = document.getElementById('decomp-btn-' + key);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Анализирую...'; }
+
+  if (typeof window.cefQuery !== 'undefined') {
+    window.cefQuery({
+      request: 'decompose:' + key,
+      onSuccess: function(r) {
+        var subtasks = JSON.parse(r);
+        decompositions[key] = subtasks;
+        showDecompPanel(key, subtasks);
+        if (btn) btn.style.display = 'none';
+      },
+      onFailure: function(c, m) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Декомпозировать'; }
+        console.error('decompose failed:', m);
+      }
+    });
+  } else {
+    // Fallback for testing without JCEF
+    if (btn) { btn.disabled = false; btn.textContent = 'Декомпозировать'; }
+  }
+}
+
+function showDecompPanel(key, subtasks) {
+  var panel = document.getElementById('decomp-panel-' + key);
+  if (!panel) return;
+  panel.innerHTML =
+    '<div class="decomp-title">ДЕКОМПОЗИЦИЯ</div>' +
+    '<div class="subtask-list">' +
+      subtasks.map(function(t){ return '<div class="subtask-item">' + escHtml(t) + '</div>'; }).join('') +
+    '</div>' +
+    '<button class="btn-create-subtasks" id="create-btn-' + key + '" onclick="createSubtasks(\'' + key + '\')">' +
+      '+ Создать в Jira' +
+    '</button>';
+  panel.classList.add('visible');
+}
+
+// ── Create subtasks ───────────────────────────────────────────────
+function createSubtasks(parentKey) {
+  var subtasks = decompositions[parentKey];
+  if (!subtasks || subtasks.length === 0) return;
+  var btn = document.getElementById('create-btn-' + parentKey);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Создаю...'; }
+
+  if (typeof window.cefQuery !== 'undefined') {
+    window.cefQuery({
+      request: 'createSubtasks:' + JSON.stringify({ parentKey: parentKey, subtasks: subtasks }),
+      onSuccess: function() {
+        if (btn) { btn.textContent = '✓ Создано'; btn.classList.add('done'); }
+      },
+      onFailure: function(c, m) {
+        if (btn) { btn.disabled = false; btn.textContent = '✗ Ошибка — повторить'; }
+      }
+    });
+  }
+}
+
+// ── Refresh ───────────────────────────────────────────────────────
+function requestRefresh() {
+  if (typeof window.cefQuery !== 'undefined') {
+    window.cefQuery({ request: 'refresh:', onSuccess: function(){}, onFailure: function(){} });
+  }
+}
+
+// ── Mode switcher ─────────────────────────────────────────────────
+function setMode(mode) {
+  document.querySelectorAll('.mode-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  document.getElementById('sprint-view').style.display = mode === 'sprint' ? '' : 'none';
+  document.getElementById('release-view').style.display = mode === 'release' ? '' : 'none';
+}
+
+// ── Release: load versions ────────────────────────────────────────
+var currentReleaseProject = '';
+
+function loadVersions() {
+  var project = document.getElementById('release-project-input').value.trim().toUpperCase();
+  if (!project) return;
+  currentReleaseProject = project;
+  setReleaseLoading('Загружаю версии...');
+
+  if (typeof window.cefQuery !== 'undefined') {
+    window.cefQuery({
+      request: 'getVersions:' + project,
+      onSuccess: function(r) {
+        clearReleaseLoading();
+        var versions = JSON.parse(r);
+        populateVersionSelect(versions);
+      },
+      onFailure: function(c, m) {
+        clearReleaseLoading();
+        setReleaseError('Ошибка загрузки версий: ' + m);
+      }
+    });
+  } else {
+    clearReleaseLoading();
+  }
+}
+
+function populateVersionSelect(versions) {
+  var sel = document.getElementById('version-select');
+  sel.innerHTML = '<option value="">— выберите версию —</option>';
+  versions.forEach(function(v) {
+    var opt = document.createElement('option');
+    opt.value = v.name;
+    var label = v.name;
+    if (v.releaseDate) label += ' (' + v.releaseDate.substring(0,10) + ')';
+    if (v.released) label += ' ✓';
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Release: load release ─────────────────────────────────────────
+function triggerLoadRelease() {
+  var project = currentReleaseProject || document.getElementById('release-project-input').value.trim().toUpperCase();
+  var version = document.getElementById('version-select').value;
+  if (!project || !version) return;
+
+  setReleaseLoading('Загружаю задачи релиза...');
+  document.getElementById('export-btn').disabled = true;
+
+  if (typeof window.cefQuery !== 'undefined') {
+    window.cefQuery({
+      request: 'loadRelease:' + project + ':' + version,
+      onSuccess: function(r) {
+        clearReleaseLoading();
+        var release = JSON.parse(r);
+        renderRelease(release);
+        document.getElementById('export-btn').disabled = false;
+      },
+      onFailure: function(c, m) {
+        clearReleaseLoading();
+        setReleaseError('Ошибка загрузки релиза: ' + m);
+      }
+    });
+  } else {
+    clearReleaseLoading();
+  }
+}
+
+function renderRelease(release) {
+  // AI Summary
+  var summaryBar = document.getElementById('release-summary-bar');
+  if (release.summary) {
+    summaryBar.textContent = release.summary;
+    summaryBar.classList.add('visible');
+  }
+
+  // Issues by type
+  var content = document.getElementById('release-content');
+  content.innerHTML = '';
+
+  var byType = release.byType;
+  var typeOrder = ['Story', 'Epic', 'Bug', 'Task', 'Sub-task', 'Subtask'];
+  var keys = Object.keys(byType).sort(function(a, b) {
+    var ia = typeOrder.indexOf(a), ib = typeOrder.indexOf(b);
+    if (ia < 0) ia = 999; if (ib < 0) ib = 999;
+    return ia - ib || a.localeCompare(b);
+  });
+
+  keys.forEach(function(type) {
+    var issues = byType[type];
+    var group = document.createElement('div');
+    group.className = 'type-group';
+
+    var header = document.createElement('div');
+    header.className = 'type-group-header';
+    header.innerHTML = '<span class="type-group-name">' + escHtml(type) + '</span>' +
+      '<span class="type-group-count">(' + issues.length + ')</span>';
+    group.appendChild(header);
+
+    issues.forEach(function(issue, i) {
+      var row = document.createElement('div');
+      row.className = 'release-issue-row';
+      row.style.animationDelay = Math.min(i * 20, 300) + 'ms';
+      var sp = issue.storyPoints != null ? '<span class="issue-sp-lnk">▸ ' + issue.storyPoints + ' SP</span>' : '';
+      row.innerHTML =
+        '<span class="issue-key-lnk">' + escHtml(issue.key) + '</span>' +
+        '<span class="issue-summary-lnk">' + escHtml(issue.summary) + '</span>' +
+        sp +
+        '<span class="issue-status-lnk">' + escHtml(issue.status || '') + '</span>';
+      group.appendChild(row);
+    });
+
+    content.appendChild(group);
+  });
+
+  if (keys.length === 0) {
+    content.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div>' +
+      '<div class="empty-state-text">Нет задач в этом релизе</div></div>';
+  }
+}
+
+// ── Release: export ───────────────────────────────────────────────
+function exportRelease() {
+  if (typeof window.cefQuery !== 'undefined') {
+    window.cefQuery({
+      request: 'exportRelease:',
+      onSuccess: function(r) {
+        // Copy to clipboard or show in a text area
+        try {
+          navigator.clipboard.writeText(r).then(function() {
+            var btn = document.getElementById('export-btn');
+            var orig = btn.textContent;
+            btn.textContent = '✓ Скопировано';
+            setTimeout(function() { btn.textContent = orig; }, 2000);
+          });
+        } catch (_) {
+          showExportDialog(r);
+        }
+      },
+      onFailure: function(c, m) { setReleaseError('Ошибка экспорта: ' + m); }
+    });
+  }
+}
+
+function showExportDialog(text) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center;';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:16px;width:90%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;gap:10px;';
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'flex:1;background:var(--bg-panel);color:var(--text);border:1px solid var(--border2);border-radius:4px;padding:8px;font-family:IBM Plex Mono,monospace;font-size:11px;resize:none;min-height:300px;outline:none;';
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Закрыть';
+  closeBtn.style.cssText = 'padding:6px 16px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer;align-self:flex-end;font-size:12px;';
+  closeBtn.onclick = function() { document.body.removeChild(overlay); };
+  box.appendChild(ta);
+  box.appendChild(closeBtn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  ta.select();
+}
+
+// ── Release helpers ───────────────────────────────────────────────
+function setReleaseLoading(text) {
+  var el = document.getElementById('release-loading');
+  document.getElementById('release-loading-text').textContent = text;
+  el.classList.add('visible');
+}
+function clearReleaseLoading() {
+  document.getElementById('release-loading').classList.remove('visible');
+}
+function setReleaseError(msg) {
+  var bar = document.getElementById('release-summary-bar');
+  bar.textContent = '⚠ ' + msg;
+  bar.classList.add('visible');
+  bar.style.borderLeftColor = 'var(--red)';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
