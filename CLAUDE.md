@@ -87,6 +87,7 @@ Non-standard source root: `src/main/changelogai/` (not `src/main/kotlin/`). Test
 | `feature/spec/engine/SpecOrchestrator.kt` | 594 | May have UI deps | Verify no Swing imports |
 | `feature/spec/ui/AssessmentPanel.kt` | 447 | Too large | Extract `AssessmentResultView` |
 | `feature/kb/ui/KnowledgeBasePanel.kt` | 401 | Too large | Extract `KbIndexStatusPanel` |
+| `feature/jenkins/engine/JenkinsMcpFetcher.kt` | 28 | Imports `McpClient`/`McpService`/`McpToolInfo` from `feature/gigacodeae/mcp/` — cross-feature boundary violation (same as `JiraMcpFetcher`) | Move MCP interfaces to `core/mcp/` |
 
 ## Dependencies
 

@@ -36,3 +36,6 @@ Thumbs.db
 .agents/
 skills/
 skills-lock.json
+
+### Git worktrees ###
+.worktrees/

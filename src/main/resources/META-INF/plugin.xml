@@ -57,6 +57,7 @@
         <feature implementation="changelogai.feature.spec.SpecFeature"/>
         <feature implementation="changelogai.feature.kb.KnowledgeBaseFeature"/>
         <feature implementation="changelogai.feature.sprint.SprintFeature"/>
+        <feature implementation="changelogai.feature.jenkins.JenkinsFeature"/>
     </extensions>
 
     <!-- Действия -->

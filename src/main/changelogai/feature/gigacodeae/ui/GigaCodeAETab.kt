@@ -10,6 +10,7 @@ import changelogai.feature.gigacodeae.UiMessage
 import changelogai.feature.gigacodeae.skill.SkillDefinition
 import changelogai.feature.gigacodeae.skill.SkillState
 import changelogai.feature.gigacodeae.skill.SkillsDialog
+import changelogai.feature.jenkins.JenkinsChatBridge
 import changelogai.feature.spec.SpecCodeBridge
 import java.awt.*
 import javax.swing.*
@@ -55,6 +56,12 @@ class GigaCodeAETab(private val project: Project) {
     val panel: JPanel = buildLayout()
 
     // Bridge listener reference (to remove it later if needed)
+    private val jenkinsBridgeListener: (String) -> Unit = { text ->
+        SwingUtilities.invokeLater {
+            inputPanel.setPrefilledText(text)
+        }
+    }
+
     private val specBridgeListener: (String) -> Unit = { prd ->
         SwingUtilities.invokeLater {
             // Switch to CODE_ASSISTANT skill
@@ -78,6 +85,7 @@ class GigaCodeAETab(private val project: Project) {
         refreshSkillCombo()
         refreshSessionCombo()
         SpecCodeBridge.addListener(specBridgeListener)
+        JenkinsChatBridge.addListener(jenkinsBridgeListener)
         chatPanel.onSaveToFile = { _ -> viewModel.send("сохрани в файл") }
         chatPanel.onCommandResult = { cmd, output ->
             val short = if (cmd.length > 60) cmd.take(57) + "…" else cmd
