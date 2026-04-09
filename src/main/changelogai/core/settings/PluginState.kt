@@ -21,6 +21,9 @@ class PluginState : PersistentStateComponent<PluginState> {
     var aiCertPath: String = PluginDefaults.aiCertPath
     var aiKeyPath: String = PluginDefaults.aiKeyPath
 
+    // Jira
+    var jiraProjectKey: String = ""
+
     // Knowledge Base — Embedding API settings
     var embeddingUrl: String = ""
     var embeddingToken: String = ""
@@ -45,6 +48,7 @@ class PluginState : PersistentStateComponent<PluginState> {
         aiToken = state.aiToken
         aiCertPath = state.aiCertPath
         aiKeyPath = state.aiKeyPath
+        jiraProjectKey = state.jiraProjectKey
         embeddingUrl = state.embeddingUrl
         embeddingToken = state.embeddingToken
         embeddingModel = state.embeddingModel

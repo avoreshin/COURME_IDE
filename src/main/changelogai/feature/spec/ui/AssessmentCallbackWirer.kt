@@ -4,10 +4,13 @@ import changelogai.core.confluence.ConfluenceContext
 import changelogai.feature.spec.confluence.AssessmentState
 import changelogai.feature.spec.confluence.ConfluenceAssessmentOrchestrator
 import changelogai.feature.spec.engine.SpecOrchestrator
+import changelogai.feature.spec.jira.JiraTaskCreator
 import changelogai.feature.spec.model.SpecState
 import changelogai.core.skill.SkillDefinition
 import changelogai.feature.kb.KnowledgeBaseService
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 /**
@@ -52,6 +55,34 @@ internal class AssessmentCallbackWirer(
         }
         assessmentEngine.onError = { m ->
             SwingUtilities.invokeLater { stateCtrl.setStatus(SpecState.ERROR, m) }
+        }
+        assessmentPanel.onCreateJiraRequested = { report ->
+            ApplicationManager.getApplication().executeOnPooledThread {
+                JiraTaskCreator(project).createFromReport(
+                    report,
+                    onProgress = { /* прогресс отображается в финальном диалоге */ },
+                    onSuccess = { storyKey, subtaskCount ->
+                        SwingUtilities.invokeLater {
+                            JOptionPane.showMessageDialog(
+                                assessmentPanel,
+                                "Создано: $storyKey + $subtaskCount подзадач",
+                                "Jira",
+                                JOptionPane.INFORMATION_MESSAGE
+                            )
+                        }
+                    },
+                    onError = { err ->
+                        SwingUtilities.invokeLater {
+                            JOptionPane.showMessageDialog(
+                                assessmentPanel,
+                                err,
+                                "Ошибка Jira",
+                                JOptionPane.ERROR_MESSAGE
+                            )
+                        }
+                    }
+                )
+            }
         }
         assessmentEngine.onStateChanged = { s ->
             SwingUtilities.invokeLater {

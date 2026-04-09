@@ -26,7 +26,8 @@
     <li>
         <b>📝 Spec Generator</b>: Многоагентная генерация полных технических требований (FR, NFR, AC, Edge Cases),
         PRD-документа и Mermaid-диаграмм из краткого описания задачи.
-        Поддерживает загрузку требований из Confluence, оценку качества существующего ТЗ и оценку трудозатрат
+        Поддерживает загрузку требований из Confluence, оценку качества существующего ТЗ и оценку трудозатрат.
+        <b>Новое:</b> автоматическое создание Jira Story + подзадач из результатов оценки одним кликом
     </li>
     <li>
         <b>📚 База знаний (Knowledge Base)</b>: Загружает страницы из Confluence,
@@ -38,6 +39,10 @@
         <b>🔗 MCP (Model Context Protocol)</b>: Настройка через JSON-файл <code>.mcp.json</code> в стиле Claude Code / Cursor.
         Поддержка STDIO и HTTP-транспорта. Авто-обнаружение серверов из Cursor, Claude Desktop, глобального конфига.
         Тест подключений с выводом списка инструментов
+    </li>
+    <li>
+        <b>🔍 Jenkins Dashboard</b>: Мониторинг Jenkins-пайплайнов прямо в IDE.
+        AI-анализ причин падений сборок, интерактивный чат по логам и рекомендации по исправлению
     </li>
     <li>
         <b>🤖 Changelog Generator</b>: Выбираете git-коммиты — плагин группирует их по типам
@@ -59,7 +64,7 @@
     <li><b>Настройте подключение</b> через иконку ⚙ Settings (URL, токен или сертификат)</li>
     <li><b>MCP-серверы</b>: отредактируйте <code>.mcp.json</code> в корне проекта или через иконку 🔌 MCP Servers</li>
     <li><b>База знаний</b>: укажите Embedding URL в Settings, затем проиндексируйте Confluence на вкладке Knowledge Base</li>
-    <li><b>Sprint Analyzer</b>: подключите Jira через MCP, откройте вкладку Sprint Analyzer и нажмите Analyze Sprint</li>
+    <li><b>Sprint Analyzer / Spec → Jira</b>: подключите Jira через MCP (preset=<code>jira</code>), укажите <b>Jira project key</b> в Settings — Sprint Analyzer и кнопка «→ Jira задачи» в Spec Generator заработают</li>
 </ol>
 
 <img src="%%DEMO_GIF_BASE64%%" alt="GIGACOURME demo" style="max-width:100%;border-radius:4px;margin-top:12px"/>

@@ -1,3 +1,18 @@
+## [1.1.0] — 2026-04-09
+
+### Added
+- **Spec → Jira**: из результатов оценки ТЗ создаётся Story + подзадачи в Jira одним кликом (кнопка «→ Jira задачи» в Assessment Panel). Project key задаётся в Settings → Jira project key
+- **Jenkins Dashboard**: мониторинг Jenkins-пайплайнов и AI-анализ причин падений сборок прямо в IDE
+- **Sprint Analyzer — War Room Dashboard**: AI-анализ активного Jira-спринта, выявление рисков, декомпозиция историй и создание подзадач
+- **Knowledge Base**: индексирование страниц Confluence с векторными эмбеддингами (BM25 + векторный поиск), RAG в чате и генераторе спецификаций
+- **Test Coverage**: аналитика покрытия кода на базе JaCoCo XML
+
+### Changed
+- `McpClient`, `McpService`, `McpToolAdapter`, `McpConfigReader`, `McpDiscovery` перенесены в `core/mcp/` — устранены нарушения архитектурных границ
+- `JiraMcpFetcher` и `JiraTool` перемещены в `core/jira/` для переиспользования между фичами
+
+---
+
 ## [2026-03-17]
 
 ### Added

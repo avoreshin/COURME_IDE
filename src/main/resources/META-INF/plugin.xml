@@ -40,7 +40,7 @@
         <applicationService serviceImplementation="changelogai.core.mcp.McpState"/>
         <applicationService serviceImplementation="changelogai.core.skill.SkillState"/>
 
-        <projectService serviceImplementation="changelogai.feature.gigacodeae.mcp.McpService"/>
+        <projectService serviceImplementation="changelogai.core.mcp.McpService"/>
         <projectService serviceImplementation="changelogai.feature.gigacodeae.ChatSessionRepository"/>
         <projectService serviceImplementation="changelogai.feature.spec.SpecSessionRepository"/>
         <projectService serviceImplementation="changelogai.feature.kb.KnowledgeBaseService"/>

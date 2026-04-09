@@ -51,6 +51,9 @@ class SettingsTab(private val project: Project) {
     private val embeddingTokenField = JPasswordField()
     private val embeddingModelComboBox = ComboBox(arrayOf<String>()).apply { isEditable = true }
 
+    // Jira
+    private val jiraProjectKeyField = JBTextField()
+
     private val applyButton = JButton("Apply")
     private val resetButton = JButton("Reset")
     private val resetDefaultsButton = JButton("Reset defaults")
@@ -146,6 +149,9 @@ class SettingsTab(private val project: Project) {
             .addLabeledComponent("Embedding model:", embeddingModelComboBox)
             .addTooltip("Model name for embeddings (e.g. text-embedding-ada-002). Loaded via 'Get models'.")
             .addSeparator()
+            .addLabeledComponent("Jira project key:", jiraProjectKeyField)
+            .addTooltip("Project key for creating Jira issues (e.g. PROJ). Requires Jira MCP server configured.")
+            .addSeparator()
             .panel
 
         val titledBorder = BorderFactory.createTitledBorder(
@@ -185,6 +191,7 @@ class SettingsTab(private val project: Project) {
         aiTokenField.text  = settings.aiToken
         aiCertField.text = settings.aiCertPath
         aiKeyField.text = settings.aiKeyPath
+        jiraProjectKeyField.text = settings.jiraProjectKey
         embeddingUrlField.text = settings.embeddingUrl
         embeddingTokenField.text = settings.embeddingToken
         if (settings.embeddingModel.isNotBlank()) {
@@ -207,6 +214,7 @@ class SettingsTab(private val project: Project) {
         aiTokenField.document.addDocumentListener(docListener)
         embeddingUrlField.document.addDocumentListener(docListener)
         embeddingTokenField.document.addDocumentListener(docListener)
+        jiraProjectKeyField.document.addDocumentListener(docListener)
 
         aiCertField.addDocumentListener(docListener)
         aiKeyField.addDocumentListener(docListener)
@@ -290,6 +298,7 @@ class SettingsTab(private val project: Project) {
             settings.aiToken = String(aiTokenField.password)
             settings.aiCertPath = aiCertField.text
             settings.aiKeyPath = aiKeyField.text
+            settings.jiraProjectKey = jiraProjectKeyField.text.trim()
             settings.embeddingUrl = embeddingUrlField.text
             settings.embeddingToken = String(embeddingTokenField.password)
             settings.embeddingModel = embeddingModelComboBox.selectedItem?.toString() ?: ""

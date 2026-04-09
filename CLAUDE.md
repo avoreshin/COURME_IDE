@@ -2,93 +2,108 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build Commands
+## Commands
 
 ```bash
-./gradlew buildPlugin          # Build plugin distribution (.zip in build/distributions/)
-./gradlew runIde               # Run IDE instance with plugin loaded for manual testing
-./gradlew test                 # Run all tests
-./gradlew test --rerun-tasks   # Force re-run tests (bypass cache)
-./gradlew jacocoTestReport     # Generate HTML coverage report in build/reports/jacoco/
-./build.sh                     # Convenience script with release/publish options
+# Build the plugin ZIP
+./gradlew buildPlugin
+
+# Run the plugin in a sandboxed IDE instance
+./gradlew runIde
+
+# Run all tests
+./gradlew test
+
+# Run a single test class
+./gradlew test --tests "changelogai.feature.jenkins.engine.JenkinsAnalyzerTest"
+
+# Verify plugin against target IDEs
+./gradlew verifyPlugin
+
+# JaCoCo coverage report (generated automatically after test)
+./gradlew jacocoTestReport
 ```
+
+External repos (Nexus/Sberosc) require credentials passed as system properties:
+`-Dgradle.wrapperUser=... -Dgradle.wrapperPassword=...` or `-Dgradle.wrapperOscToken=...`
+
+Release build: add `-Drelease=true` to drop the `-SNAPSHOT` suffix.
+
+## Project Layout
+
+- Source root: `src/main/changelogai/` (non-standard — set in `sourceSets`)
+- Tests: `src/test/kotlin/changelogai/`
+- Plugin descriptor: `bin/main/META-INF/plugin.xml`
+- Plugin ID / group / version: `gradle.properties`
 
 ## Architecture
 
-The plugin is an IntelliJ Platform plugin (plugin ID: `changelogai`, display name: `AI-OAssist`) that integrates AI capabilities into JetBrains IDEs.
+Three layers with strict dependency rules (see `.claude/rules/architecture.md`):
 
-### Layer Structure
+```
+platform/  →  core/  ←  feature/*/
+```
 
-**Platform layer** (`platform/`) — IntelliJ integration. `PluginToolWindowFactory` is the entry point, creates the right-sidebar tool window and delegates to `FeatureRegistry`, which resolves `changelogai.feature` extension points from `plugin.xml`.
+`platform/` wires everything together. `feature/*` packages must not import each other. `core/` has no upward dependencies.
 
-**Feature layer** (`feature/`) — Six independently toggleable features, each registered as an extension point. Features can be enabled/disabled without IDE restart via `FeatureToggleState`.
+### Core Layer (`core/`)
 
-**Core layer** (`core/`) — Shared LLM client abstraction, settings, and feature interfaces. `LLMClientFactory` (in `platform/`) creates the appropriate client based on settings.
+| Package | Purpose |
+|---|---|
+| `core/llm/client/` | `LLMClient` interface + three implementations: `GigaChatClient` (mTLS), `ExternalGigaChatClient` (OAuth), `ChemodanClient` |
+| `core/llm/cancellation/` | `Cancelable` interface, `AtomicCancelable`, `ProgressIndicatorWrapper` |
+| `core/llm/model/` | DTOs for chat messages, requests, responses, function calls |
+| `core/feature/` | `Feature` interface + `FeatureToggleState` registry |
+| `core/settings/` | `PluginState` — `@Service(Level.APP)` + `PersistentStateComponent` |
+| `core/skill/` | `SkillDefinition` data class; 9 built-in skills |
+| `core/confluence/` | Confluence REST client + content parser |
+| `core/mcp/` | MCP server config & JSON sync |
 
-### Features
+### Feature Layer (`feature/`)
 
-| Feature | Package | Description |
-|---|---|---|
-| Changelog Generator | `feature/changelog/` | Git commit → release notes via LLM |
-| GigaCodeAE | `feature/gigacodeae/` | Main AI chat assistant with multi-agent orchestration |
-| Spec Generator | `feature/spec/` | Generates specifications from Confluence requirements |
-| Knowledge Base | `feature/kb/` | RAG system indexing Confluence pages |
-| Coverage Analysis | `feature/coverage/` | Test coverage display panel |
-| MCP | Integrated into gigacodeae | Model Context Protocol tool integration |
+Each feature implements `Feature` (provides `id`, `createTab(): JPanel`, availability check) and is registered in `platform/FeatureRegistry`.
 
-### GigaCodeAE Orchestrator (most complex component)
+| Feature | Description |
+|---|---|
+| `changelog` | Generates CHANGELOG.md from git commits via LLM |
+| `gigacodeae` | Main AI chat with multi-agent orchestration, tool calls, MCP, skills |
+| `kb` | Knowledge base: Confluence indexing + semantic search (embeddings) |
+| `spec` | Technical specification generator from Confluence requirements |
+| `jenkins` | Jenkins build dashboard + AI failure analysis |
+| `sprint` | Sprint planning / backlog analysis |
+| `coverage` | Code coverage analytics panel |
 
-The AI chat flows through: `ChatPanel` → `ChatAgent` → `MainOrchestrator` → specialized agents.
+### Platform Layer (`platform/`)
 
-Agents (`feature/gigacodeae/orchestrator/agents/`):
-- `PlannerAgent` — decomposes user task into steps
-- `CodeAgent` — writes/modifies code
-- `SearchAgent` — searches codebase
-- `TestAgent` — writes/runs tests
-- `ReviewAgent` — reviews changes
-- `ToolAgent` — executes MCP and builtin tools
-- `SummarizerAgent` — compresses context when token limit approaches
+`ChangelogToolWindowFactory` creates the tool window. `MainShell` hosts all tabs in a `CardLayout` with a vertical `NavBar`. `LLMClientFactory` creates the appropriate `LLMClient` based on settings.
 
-### LLM Client
+### Multi-Agent Orchestration (feature/gigacodeae/orchestrator/)
 
-`core/llm/client/` contains: `GigaChatClient` (internal API), `ExternalGigaChatClient` (external API). Both implement `LLMClient`. Requests support cancellation via `Cancelable` interface integrated with IDE progress indicators (`core/llm/cancellation/`). LLM call tracing is available via `core/llm/debug/`.
+`MainOrchestrator.sendMessage()` pipeline:
+1. **Compress history** — `ContextCompressor` keeps recent messages + rolling summary
+2. **Classify intent** — `IntentClassifier` (rules-based, no LLM call)
+3. **Route** → direct answer, single specialist agent, or planner + multi-step agents
+4. **Tool dispatch** — `ToolDispatcher` executes `ReadFileTool`, `WriteFileTool`, `SearchInFilesTool`, `RunTerminalTool`, `SearchKnowledgeBaseTool`, MCP tools
 
-### Knowledge Base (RAG)
+All LLM calls run off EDT; results are delivered via callbacks (`onAssistantMessage`, `onDone`, `onError`). Cancellation uses `AtomicCancelable`.
 
-`feature/kb/` implements retrieval-augmented generation: Confluence pages are fetched, chunked, embedded, and stored in a hybrid BM25 + vector index (`feature/kb/store/BM25Index.kt`). `KnowledgeBaseService` is a project-level service managing the index lifecycle.
+## Adding a New Feature
 
-### Settings & State
+1. Create `feature/<name>/` package
+2. Implement `Feature` interface (`core/feature/Feature.kt`)
+3. Register in `plugin.xml` as `changelogai.feature` extension point
+4. Toggle visibility via `FeatureToggleState`
 
-- `PluginState` (application service) — all plugin settings (API keys, model selection, etc.)
-- `PluginDefaults` — default values
-- `FeatureToggleState` (application service) — per-feature enable/disable flags
-- `McpState`, `SkillState` — feature-specific persistent state
+## Threading Rules
 
-## Source Layout
+- **Off EDT**: all LLM/network calls (`ApplicationManager.getApplication().executeOnPooledThread`)
+- **On EDT**: all Swing/UI updates (`SwingUtilities.invokeLater`)
+- **Cancellation**: pass `AtomicCancelable`; call `checkCanceled()` in long loops
 
-Non-standard source root: `src/main/changelogai/` (not `src/main/kotlin/`). Tests are at `src/test/kotlin/changelogai/`.
+## UI Panel Size Limit
 
-## Key Files
-
-- `src/main/resources/META-INF/plugin.xml` — extension points, services, actions registration
-- `gradle.properties` — plugin version, ID, and IDE version constraints
-- `build.gradle.kts` — fat jar config, JaCoCo, Maven publishing to internal Nexus
-
-## Architecture Rules
-
-@.claude/rules/architecture.md
-
-## Known Technical Debt (address when touching these files)
-
-| File | Lines | Problem | Fix |
-|------|-------|---------|-----|
-| `feature/spec/ui/SpecPanel.kt` | 1259 | God class — UI + logic mixed | Extract `SpecToolbar`, `SpecEditor`, `SpecResultView` |
-| `feature/gigacodeae/ui/ChatPanel.kt` | 694 | Too large | Extract `MessageListPanel`, `ChatToolbar` |
-| `feature/spec/engine/SpecOrchestrator.kt` | 594 | May have UI deps | Verify no Swing imports |
-| `feature/spec/ui/AssessmentPanel.kt` | 447 | Too large | Extract `AssessmentResultView` |
-| `feature/kb/ui/KnowledgeBasePanel.kt` | 401 | Too large | Extract `KbIndexStatusPanel` |
-| `feature/jenkins/engine/JenkinsMcpFetcher.kt` | 28 | Imports `McpClient`/`McpService`/`McpToolInfo` from `feature/gigacodeae/mcp/` — cross-feature boundary violation (same as `JiraMcpFetcher`) | Move MCP interfaces to `core/mcp/` |
+Panel files must stay under 300 lines. When editing a panel that exceeds 300 lines, extract at least one sub-component. Current known violations: `SpecPanel.kt`, `ChatPanel.kt`, `AssessmentPanel.kt`, `KnowledgeBasePanel.kt`.
 
 ## Dependencies
 
-Runtime: Apache HttpClient (LLM API calls), Jackson (JSON). The plugin bundles all runtime dependencies into a fat jar — add new dependencies to `runtimeClasspath` configuration, not just `implementation`.
+Add new runtime libs to `runtimeClasspath` in `build.gradle.kts`, not `implementation`. The fat-jar build bundles all runtime deps.
