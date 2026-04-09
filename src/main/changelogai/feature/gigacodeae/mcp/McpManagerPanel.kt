@@ -1,5 +1,6 @@
 package changelogai.feature.gigacodeae.mcp
 
+import changelogai.core.mcp.McpDiscovery
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
